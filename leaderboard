@@ -1,1 +1,144 @@
+local DSS = game:GetService("DataStoreService")
+local LDS = DSS:GetDataStore("LeaderboardDataStore")
 
+local Sort_Update = 1
+local Rank_Update = 1
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local BatteryLeaderboard = game.Workspace.Leaderboards.BatteryLeaderboard
+local Frame = BatteryLeaderboard.SurfaceGui.Frame
+local Amount = Frame.Amount
+local Name = Frame.PlayerName
+local Ranking = Frame.Place
+
+local AbbreviationList = {
+
+	"";
+	"K";
+	"M";
+	"B";
+	"T";
+	"Q";
+	"Qn";
+	"Sx";
+	"Oc";
+	"N";
+	"D";
+
+	"∞"
+
+}
+
+local key = "LeaderboardDataKey"
+
+local rankedPlayers = {}
+
+local function AddPlayerToLeaderboard(plr)
+	table.insert(rankedPlayers, plr)
+end
+
+local function loadData(plr)
+	local data2load
+	
+	local success, unsuccess = pcall(function()
+		data2load = LDS:GetAsync(key) 
+	end)
+	
+	if success and data2load and data2load[1] then
+		table.insert(rankedPlayers, 1, data2load[1])
+		table.insert(rankedPlayers, 2, data2load[2])
+		table.insert(rankedPlayers, 3, data2load[3])
+		table.insert(rankedPlayers, 4, data2load[4])
+		table.insert(rankedPlayers, 5, data2load[5])
+		table.insert(rankedPlayers, 6, data2load[6])
+		table.insert(rankedPlayers, 7, data2load[7])
+	end
+	
+	print(data2load)
+end
+
+local function saveData(plr)
+	local data2save = {}
+	
+	table.insert(data2save, 1, rankedPlayers[1])
+	table.insert(data2save, 2, rankedPlayers[2])
+	table.insert(data2save, 3, rankedPlayers[3])
+	table.insert(data2save, 4, rankedPlayers[4])
+	table.insert(data2save, 5, rankedPlayers[5])
+	table.insert(data2save, 6, rankedPlayers[6])
+	table.insert(data2save, 7, rankedPlayers[7])
+	
+	local success, unsuccess = pcall(function()
+		LDS:SetAsync(key, data2save) 
+	end)
+	
+	print(data2save)
+end
+
+task.spawn(function()
+	while wait(Sort_Update * 2) do
+		table.sort(rankedPlayers, function(a, b)
+			return a.leaderstats.Batteries.Value > b.leaderstats.Batteries.Value
+		end)
+	end
+end)
+	
+task.spawn(function()
+	while wait(Rank_Update * 2) do
+		for rank, plr in pairs(rankedPlayers) do
+			local function abbreviateNumber(n)
+				for i = 1, #AbbreviationList do
+					if n < (10 ^ (i * 3)) then
+						if AbbreviationList[i] == "∞" then
+							return "∞"
+						else
+							return math.floor(n / ((10 ^ ((i - 1) * 3)) / 100)) / (100) .. AbbreviationList[i]
+						end
+					elseif tostring(n) == "inf" then
+						return "∞"
+					end 
+				end
+			end
+			local function clone(name1, name2, name3)
+				local nRanking = Ranking:Clone()
+				nRanking.Name = name1
+				nRanking.Parent = Frame
+				nRanking.Position = UDim2.new(0, 0, 0.125 * rank, 0)
+				nRanking.Text = tostring(rank)
+				local nName = Name:Clone()
+				nName.Name = name2
+				nName.Parent = Frame
+				nName.Position = UDim2.new(0.25, 0, 0.125 * rank, 0)
+				nName.Text = tostring(plr.Name)
+				local nAmount = Amount:Clone()
+				nAmount.Name = name3
+				nAmount.Parent = Frame
+				nAmount.Position = UDim2.new(0.5, 0, 0.125 * rank, 0)
+				nAmount.Text = tostring(abbreviateNumber(plr.leaderstats.Batteries.Value))
+			end
+			if rank == 1 then
+				Ranking.Text = tostring(rank)
+				Name.Text = tostring(plr.Name)
+				Amount.Text = tostring(abbreviateNumber(plr.leaderstats.Batteries.Value))
+			elseif rank == 2 then
+				clone("secondRanking", "secondName", "secondAmount")
+			elseif rank == 3 then
+				clone("thirdRanking", "thirdName", "thirdAmount")
+			elseif rank == 4 then
+				clone("fourthRanking", "fourthName", "fourthAmount")
+			elseif rank == 5 then
+				clone("fifthRanking", "fifthName", "fifthAmount")
+			elseif rank == 6 then
+				clone("sixthRanking", "sixthName", "sixthAmount")
+			elseif rank == 7 then
+				clone("seventhRanking", "seventhName", "seventhAmount")
+			end
+		end
+	end
+end)
+
+Players.PlayerAdded:Connect(loadData)
+Players.PlayerRemoving:Connect(saveData)
+Players.PlayerAdded:Connect(AddPlayerToLeaderboard)
